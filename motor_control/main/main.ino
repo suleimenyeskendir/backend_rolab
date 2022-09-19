@@ -1,185 +1,69 @@
-#define D1_ENA 37
-#define D1_IN1 35
-#define D1_IN2 33
-#define D1_IN3 36
-#define D1_IN4 34
-#define D1_ENB 32
+#include "ArduinoJson.h"
+#define IN1_PIN   5   // пины драйвера двигателей MX1508
+#define IN2_PIN   6   //
+#define IN3_PIN   9   //
+#define IN4_PIN   10  //  
+#define LED_PIN   13  
 
-#define D2_ENA 53
-#define D2_IN1 51
-#define D2_IN2 49
-#define D2_IN3 52
-#define D2_IN4 50
-#define D2_ENB 48
+// json буфер для пакетов от orange pi
+StaticJsonDocument<200> jsondoc;
 
-#define D3_ENA 45
-#define D3_IN1 43
-#define D3_IN2 41
-#define D3_IN3 44
-#define D3_IN4 42
-#define D3_ENB 40
+// глобальные переменные скорости
+int16_t speedA = 0;
+int16_t speedB = 0;
 
-int x = 0;
-int SerialMovement();
-void forward();
-void left_turn();
-void right_turn();
-void backward();
-void nullify();
 
-void setup() {
-Serial.begin(115200);
-Serial.setTimeout(1);
-
-pinMode(D1_ENA, OUTPUT);
-pinMode(D1_IN1, OUTPUT);
-pinMode(D1_IN2, OUTPUT);
-pinMode(D1_IN3, OUTPUT);
-pinMode(D1_IN4, OUTPUT);
-pinMode(D1_ENB, OUTPUT);
-
-pinMode(D2_ENA, OUTPUT);
-pinMode(D2_IN1, OUTPUT);
-pinMode(D2_IN2, OUTPUT);
-pinMode(D2_IN3, OUTPUT);
-pinMode(D2_IN4, OUTPUT);
-pinMode(D2_ENB, OUTPUT);
-
-pinMode(D3_ENA, OUTPUT);
-pinMode(D3_IN1, OUTPUT);
-pinMode(D3_IN2, OUTPUT);
-pinMode(D3_IN3, OUTPUT);
-pinMode(D3_IN4, OUTPUT);
-pinMode(D3_ENB, OUTPUT);
-
-analogWrite(D1_ENA, 255);
-analogWrite(D1_ENB, 255);
-
-analogWrite(D2_ENA, 255);
-analogWrite(D2_ENB, 255);
-
-analogWrite(D3_ENA, 255);
-analogWrite(D3_ENB, 255);
-
-nullify();
-
+void setup()
+{
+  Serial.begin(9600);
+  pinMode(IN1_PIN, OUTPUT);    
+  pinMode(IN2_PIN, OUTPUT);    
+  pinMode(IN3_PIN, OUTPUT);    
+  pinMode(IN4_PIN, OUTPUT);    
+  pinMode(LED_PIN, OUTPUT);
 }
 
-void loop() {
-x = SerialMovement();
-switch (x) {
-    case 0:
-        nullify();
-        break;
-    case 1:
-        forward();
-        delay(100);
-        break;
-    case 2:
-        left_turn();
-        delay(100);
-        break;
-    case 3:
-        right_turn();
-        delay(100);
-        break;
-    case 4:
-        backward();
-        delay(100);
-        break;
-    // default:
-
-    //     break;
+void loop()
+{
+  DeserializationError err = deserializeJson(jsondoc, Serial);  // получаем сообщение от orange pi через uart
+  if (err == DeserializationError::Ok)    // если cообщение принято
+  {
+    speedA = (float)jsondoc["speedA"] * 2.55;  // приходит диапазон [-100; 100]
+    speedB = (float)jsondoc["speedB"] * 2.55;  // расширяем до [-255; 255]
+  }
+  else
+  {
+    while (Serial.available() > 0) Serial.read(); // чистим буфер
+  }
+  moveA(speedA);  // обновляем состояние скоростей моторов
+  moveB(speedB);  //
+  delay(10);
 }
 
+void moveA(int16_t speed){
+  //speed = -speed;
+  if(speed >= 0){
+    analogWrite(IN1_PIN, LOW);  
+    analogWrite(IN2_PIN, abs(speed));
+    digitalWrite(LED_BUILTIN, LOW);
+  } 
+  else {
+    analogWrite(IN1_PIN, abs(speed));  
+    analogWrite(IN2_PIN, LOW);
+    digitalWrite(LED_BUILTIN, HIGH);
+  }
 }
 
-void forward(){
-    digitalWrite(D1_IN1, HIGH);
-    digitalWrite(D1_IN2, LOW);
-    digitalWrite(D1_IN3, LOW);
-    digitalWrite(D1_IN4, HIGH);
-
-    digitalWrite(D2_IN1, HIGH);
-    digitalWrite(D2_IN2, LOW);
-    digitalWrite(D2_IN3, LOW);
-    digitalWrite(D2_IN4, HIGH);
-
-    digitalWrite(D3_IN1, HIGH);
-    digitalWrite(D3_IN2, LOW);
-    digitalWrite(D3_IN3, LOW);
-    digitalWrite(D3_IN4, HIGH);
+void moveB(int16_t speed){
+  if(speed >= 0){
+    analogWrite(IN3_PIN, LOW);  
+    analogWrite(IN4_PIN, abs(speed));
+    digitalWrite(LED_BUILTIN, LOW);
+  } 
+  else {
+    analogWrite(IN3_PIN, abs(speed));  
+    analogWrite(IN4_PIN, LOW);
+    digitalWrite(LED_BUILTIN, HIGH);
+  }
 }
-
-void left_turn(){
-    digitalWrite(D1_IN1, LOW);
-    digitalWrite(D1_IN2, HIGH);
-    digitalWrite(D1_IN3, LOW);
-    digitalWrite(D1_IN4, HIGH);
-
-    digitalWrite(D2_IN1, LOW);
-    digitalWrite(D2_IN2, HIGH);
-    digitalWrite(D2_IN3, LOW);
-    digitalWrite(D2_IN4, HIGH);
-
-    digitalWrite(D3_IN1, LOW);
-    digitalWrite(D3_IN2, HIGH);
-    digitalWrite(D3_IN3, LOW);
-    digitalWrite(D3_IN4, HIGH);
-}
-
-void right_turn(){
-    digitalWrite(D1_IN1, HIGH);
-    digitalWrite(D1_IN2, LOW);
-    digitalWrite(D1_IN3, HIGH);
-    digitalWrite(D1_IN4, LOW);
-
-    digitalWrite(D2_IN1, HIGH);
-    digitalWrite(D2_IN2, LOW);
-    digitalWrite(D2_IN3, HIGH);
-    digitalWrite(D2_IN4, LOW);
-
-    digitalWrite(D3_IN1, HIGH);
-    digitalWrite(D3_IN2, LOW);
-    digitalWrite(D3_IN3, HIGH);
-    digitalWrite(D3_IN4, LOW);
-}
-
-void backward(){
-    digitalWrite(D1_IN1, LOW);
-    digitalWrite(D1_IN2, HIGH);
-    digitalWrite(D1_IN3, HIGH);
-    digitalWrite(D1_IN4, LOW);
-
-    digitalWrite(D2_IN1, LOW);
-    digitalWrite(D2_IN2, HIGH);
-    digitalWrite(D2_IN3, HIGH);
-    digitalWrite(D2_IN4, LOW);
-
-    digitalWrite(D3_IN1, LOW);
-    digitalWrite(D3_IN2, HIGH);
-    digitalWrite(D3_IN3, HIGH);
-    digitalWrite(D3_IN4, LOW);
-}
-
-void nullify(){
-    digitalWrite(D1_IN1, LOW);
-    digitalWrite(D1_IN2, LOW);
-    digitalWrite(D1_IN3, LOW);
-    digitalWrite(D1_IN4, LOW);
-
-    digitalWrite(D2_IN1, LOW);
-    digitalWrite(D2_IN2, LOW);
-    digitalWrite(D2_IN3, LOW);
-    digitalWrite(D2_IN4, LOW);
-
-    digitalWrite(D3_IN1, LOW);
-    digitalWrite(D3_IN2, LOW);
-    digitalWrite(D3_IN3, LOW);
-    digitalWrite(D3_IN4, LOW);
-}
-
-int SerialMovement(){
-    while (!Serial.available());
-    return Serial.readString().toInt();;
-}
+ 

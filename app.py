@@ -1,51 +1,84 @@
-from flask import Flask, Response
-from flask import send_from_directory
-import serial
-import time
+from flask import Flask, render_template, Response, request
 import cv2
-import json, os, signal
-# https://github.com/TrashRobotics/CVbot
-camera = cv2.VideoCapture(0)
-# arduino = serial.Serial(port='/dev/ttyACM0', baudrate=115200, timeout=.1)
+import serial
+import threading
+import time
+import json
+import argparse
 
 app = Flask(__name__)
+camera = cv2.VideoCapture(0)  # веб камера
 
-def gen_frames():  
+controlX, controlY = 0, 0  # глобальные переменные положения джойстика с web-страницы
+
+
+def getFramesGenerator():
+    """ Генератор фреймов для вывода в веб-страницу, тут же можно поиграть с openCV"""
     while True:
-        success, frame = camera.read()  # read the camera frame
-        if not success:
-            break
-        else:
-            ret, buffer = cv2.imencode('.jpg', frame)
-            frame = buffer.tobytes()
+        time.sleep(0.01)    # ограничение fps (если видео тупит, можно убрать)
+        success, frame = camera.read()  # Получаем фрейм с камеры
+        if success:
+            frame = cv2.resize(frame, (64, 64), interpolation=cv2.INTER_AREA)  # уменьшаем разрешение кадров (если видео тупит, можно уменьшить еще больше)
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)   # перевод изображения в градации серого
+            _, frame = cv2.threshold(frame, 127, 255, cv2.THRESH_BINARY)  # бинаризуем изображение
+            _, buffer = cv2.imencode('.jpg', frame)
             yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+                   b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
 
-def write_read(x):
-    arduino.write(bytes(x, 'utf-8'))
-    time.sleep(0.05)
-
-@app.route('/kill')
-def stopServer():
-    os.kill(os.getpid(), signal.SIGINT)
-    return 'killed'
-
-@app.route('/movement/<num>')
-def number_handler(num):
-    write_read(num)
-    return 'good'
-
-@app.route('/movement/')
-def movement_handler():
-    return send_from_directory(path='static', filename='movement.html')
-
-@app.route('/webcam/')
-def videostream_handler():
-    return send_from_directory(path='static', filename='video.html')
 
 @app.route('/video_feed')
 def video_feed():
-    return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    """ Генерируем и отправляем изображения с камеры"""
+    return Response(getFramesGenerator(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+
+@app.route('/')
+def index():
+    """ Крутим html страницу """
+    return render_template(path='static', filename='index.html')
+
+
+@app.route('/control')
+def control():
+    """ Пришел запрос на управления роботом """
+    global controlX, controlY
+    controlX, controlY = float(request.args.get('x')) / 100.0, float(request.args.get('y')) / 100.0
+    return '', 200, {'Content-Type': 'text/plain'}
+
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=80, debug=False)
+    # пакет, посылаемый на робота
+    msg = {
+        "speedA": 0,  # в пакете посылается скорость на левый и правый борт тележки
+        "speedB": 0  #
+    }
+
+    # параметры робота
+    speedScale = 0.65  # определяет скорость в процентах (0.50 = 50%) от максимальной абсолютной
+    maxAbsSpeed = 100  # максимальное абсолютное отправляемое значение скорости
+    sendFreq = 10  # слать 10 пакетов в секунду
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-s', '--serial', type=str, default='/dev/ttyACM0', help="Serial port")
+    args = parser.parse_args()
+
+    serialPort = serial.Serial(args.serial, 9600)   # открываем uart
+
+    def sender():
+        """ функция цикличной отправки пакетов по uart """
+        global controlX, controlY
+        while True:
+            speedA = maxAbsSpeed * (controlY + controlX)    # преобразуем скорость робота,
+            speedB = maxAbsSpeed * (controlY - controlX)    # в зависимости от положения джойстика
+
+            speedA = max(-maxAbsSpeed, min(speedA, maxAbsSpeed))    # функция аналогичная constrain в arduino
+            speedB = max(-maxAbsSpeed, min(speedB, maxAbsSpeed))    # функция аналогичная constrain в arduino
+
+            msg["speedA"], msg["speedB"] = speedScale * speedA, speedScale * speedB     # урезаем скорость и упаковываем
+
+            serialPort.write(json.dumps(msg, ensure_ascii=False).encode("utf8"))  # отправляем пакет в виде json файла
+            time.sleep(1 / sendFreq)
+
+    threading.Thread(target=sender, daemon=True).start()    # запускаем тред отправки пакетов по uart с демоном
+
+    app.run(debug=False, host='0.0.0.0', port=8080)   # запускаем flask приложение
