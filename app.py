@@ -6,7 +6,7 @@ import cv2
 import json, os, signal
 
 camera = cv2.VideoCapture(0)
-arduino = serial.Serial(port='/dev/ttyACM0', baudrate=115200, timeout=.1)
+# arduino = serial.Serial(port='/dev/ttyACM0', baudrate=115200, timeout=.1)
 
 app = Flask(__name__)
 
@@ -21,27 +21,27 @@ def gen_frames():
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
-def write_read(x):
-    arduino.write(bytes(x, 'utf-8'))
-    time.sleep(0.05)
+# def write_read(x):
+#     arduino.write(bytes(x, 'utf-8'))
+#     time.sleep(0.05)
 
 @app.route('/kill')
 def stopServer():
     os.kill(os.getpid(), signal.SIGINT)
     return 'killed'
 
-@app.route('/movement/<num>')
-def number_handler(num):
-    write_read(num)
-    return 'good'
+# @app.route('/movement/<num>')
+# def number_handler(num):
+#     write_read(num)
+#     return 'good'
 
 @app.route('/movement/')
 def movement_handler():
-    return send_from_directory('static', filename='movement.html')
+    return send_from_directory(path='static', filename='movement.html')
 
 @app.route('/webcam/')
 def videostream_handler():
-    return send_from_directory('static', filename='video.html')
+    return send_from_directory(path='static', filename='video.html')
 
 @app.route('/video_feed')
 def video_feed():
