@@ -4,7 +4,7 @@ import serial
 import time
 import cv2
 import json, os, signal
-
+# https://github.com/TrashRobotics/CVbot
 camera = cv2.VideoCapture(0)
 # arduino = serial.Serial(port='/dev/ttyACM0', baudrate=115200, timeout=.1)
 
@@ -21,19 +21,19 @@ def gen_frames():
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
-# def write_read(x):
-#     arduino.write(bytes(x, 'utf-8'))
-#     time.sleep(0.05)
+def write_read(x):
+    arduino.write(bytes(x, 'utf-8'))
+    time.sleep(0.05)
 
 @app.route('/kill')
 def stopServer():
     os.kill(os.getpid(), signal.SIGINT)
     return 'killed'
 
-# @app.route('/movement/<num>')
-# def number_handler(num):
-#     write_read(num)
-#     return 'good'
+@app.route('/movement/<num>')
+def number_handler(num):
+    write_read(num)
+    return 'good'
 
 @app.route('/movement/')
 def movement_handler():
