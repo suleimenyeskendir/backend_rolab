@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js" integrity="sha384-QJHtvGhmr9XOIpI6YVutG+2QOK9T+ZnN4kzFN1RtK3zEFEIsxhlmWl5/YESvpZ13" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+<style>
+code {
+  background: #2db34a;
+  border-radius: 6px;
+  color: #fff;
+  display: block;
+  font: 14px/24px "Source Code Pro", Inconsolata, "Lucida Console", Terminal, "Courier New", Courier;
+  padding: 24px 15px;
+  text-align: center;
+}
+.default {
+  background: none;
+  color: #666;
+}
+.group:before,
+.group:after {
+  content: "";
+  display: table;
+}
+.group:after {
+  clear: both;
+}
+.group {
+  /* background: #eaeaed; */
+  border-radius: 6px;
+  clear: both;
+  *zoom: 1;
+}
+.group,
+header,
+section,
+aside,
+footer {
+  margin: 0 1.5% 24px 1.5%;
+}
+section {
+  float: left;
+  width: 45%;
+}
+aside {
+  float: right;
+  width: 45%;
+}
+footer {
+  margin-bottom: 0;
+}
+
+</style>
+
+</head>
+<body>
+  <header>
+    <code>
+      <button onmousedown="start_top()" onmouseup="end_top()">forward</button>
+    </code>
+  </header>
+
+  <div class="group">
+    
+    <section>
+      <code> 
+        <button onmousedown="start_left()" onmouseup="end_left()">left turn</button>
+      </code>
+    </section>
+    
+
+    <aside>
+      <code>
+        <button onmousedown="start_right()" onmouseup="end_right()">right turn</button>
+      </code>
+    </aside>
+
+  </div>
+  
+  <footer>
+    <code>
+      <button onmousedown="start_down()" onmouseup="end_down()">back</button>
+    </code>
+  </footer>
+
+
+</body>
+<script>
+document.addEventListener("keyup", event => {
+  if (event.isComposing || event.keyCode === 87) {
+    end_top();
+    return;
+  }else if(event.isComposing || event.keyCode === 83){
+    end_down();
+    return;
+  }else if(event.isComposing || event.keyCode === 65){
+    end_left();
+    return;
+  }else if(event.isComposing || event.keyCode === 68){
+    end_right();
+    return;
+  }
+});
+
+document.addEventListener("keydown", event => {
+  if (event.isComposing || event.keyCode === 87) {
+    start_top();
+    return;
+  }else if(event.isComposing || event.keyCode === 83){
+    start_down();
+    return;
+  }else if(event.isComposing || event.keyCode === 65){
+    start_left();
+    return;
+  }else if(event.isComposing || event.keyCode === 68){
+    start_right();
+    return;
+  }
+  nullify();
+});
+
+var top_counter;
+var left_counter;
+var right_counter;
+var down_counter;
+function start_top() {
+    top_counter = setInterval(function(){
+      var xmlHttp = new XMLHttpRequest();
+      xmlHttp.open('get', 'http://10.241.217.227/movement/1', true);
+      xmlHttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+      xmlHttp.send();
+    }, 100);
+}
+function end_top() {
+    clearInterval(top_counter);
+    nullify();
+}
+
+function start_left() {
+    left_counter = setInterval(function(){
+      var xmlHttp = new XMLHttpRequest();
+      xmlHttp.open('get', 'http://10.241.217.227/movement/2', true);
+      xmlHttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+      xmlHttp.send();
+    }, 100);
+}
+function end_left() {
+    clearInterval(left_counter);
+    nullify();
+}
+
+
+function start_right() {
+    right_counter = setInterval(function(){
+      var xmlHttp = new XMLHttpRequest();
+      xmlHttp.open('get', 'http://10.241.217.227/movement/3', true);
+      xmlHttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+      xmlHttp.send();
+    }, 100);
+}
+function end_right() {
+    clearInterval(right_counter);
+    nullify();
+}
+
+function start_down() {
+    down_counter = setInterval(function(){
+      var xmlHttp = new XMLHttpRequest();
+      xmlHttp.open('get', 'http://10.241.217.227/movement/4', true);
+      xmlHttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+      xmlHttp.send();
+    }, 100);
+}
+function end_down() {
+    clearInterval(down_counter);
+    nullify();
+}
+function nullify() {
+    var xmlHttp = new XMLHttpRequest();
+    xmlHttp.open( "GET", 'http://10.241.217.227/movement/0', true ); // false for synchronous request
+    xmlHttp.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+    xmlHttp.send();
+}
+
+</script>
+</html> 
